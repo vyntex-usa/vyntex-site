@@ -14,7 +14,7 @@ const copy = {
     items: [
       ["01", "Review", "We identify your current tools, manual work, and operational gaps."],
       ["02", "Design", "We map the connected workflow and recommend what should stay, connect, or change."],
-      ["03", "Build", "We configure, automate, test, launch, and support the approved system."],
+      ["03", "Implement", "We configure, automate, test, launch, and support the approved system."],
     ],
   },
   es: {
