@@ -229,7 +229,7 @@ const en = {
       },
       {
         id: "build",
-        title: "Build",
+        title: "Create",
         description:
           "We create the website, automation, CRM, chatbot, or digital system.",
       },

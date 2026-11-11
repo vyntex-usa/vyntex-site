@@ -4,7 +4,7 @@
  * by the modal and the unit tests.
  *
  *   intent=demo                 opens the demo form
- *   industry=<edition>          pre-fills the industry (build, clean, landscape, ...)
+ *   industry=<edition>          pre-fills the industry (contractors, clean, landscape, ...; 'build' is the old id for contractors and still works)
  *   plan=<0|1|2>&billing=<monthly|yearly>  notes the plan the person picked
  */
 
@@ -14,15 +14,19 @@ export interface DemoPrefill {
 }
 
 const EDITIONS: Record<string, { en: string; es: string }> = {
-  build: { en: "Construction", es: "Construcción" },
-  clean: { en: "Cleaning", es: "Limpieza" },
-  landscape: { en: "Landscaping", es: "Jardinería" },
+  build: { en: "General contractors", es: "Contratistas generales" },
+  contractors: { en: "General contractors", es: "Contratistas generales" },
+  clean: { en: "Cleaning services", es: "Servicios de limpieza" },
+  landscape: { en: "Landscaping", es: "Jardinería y paisajismo" },
   wash: { en: "Pressure washing, windows and gutters", es: "Lavado a presión, ventanas y canaletas" },
   haul: { en: "Junk removal and moving", es: "Retiro de basura y mudanzas" },
   snow: { en: "Snow removal", es: "Remoción de nieve" },
   turnover: { en: "Property turnover and make-ready", es: "Preparación de propiedades entre inquilinos" },
   events: { en: "Event setup and staffing", es: "Montaje y personal para eventos" },
+  hvac: { en: "HVAC: heating, cooling and air quality", es: "Calefacción, aire acondicionado y calidad del aire" },
+  plumbing: { en: "Plumbing", es: "Plomería" },
   practice: { en: "Professional services", es: "Servicios profesionales" },
+  barber: { en: "Barbershops", es: "Barberías" },
 };
 
 const PLANS = {

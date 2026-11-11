@@ -14,7 +14,7 @@ const valid = {
   businessName: "Acme Cleaning LLC",
   email: "ana@example.com",
   phone: "609-555-0100",
-  industry: "Cleaning",
+  industry: "Cleaning services",
   teamSize: "6_15",
   preferredDate: "",
   preferredTime: "morning",
@@ -83,11 +83,11 @@ describe("Book a Free Demo links", () => {
     expect(isDemoIntent("?intent=demo")).toBe(true);
     expect(isDemoIntent("?intent=other")).toBe(false);
     expect(demoPrefillFromSearch("?intent=demo&industry=clean&plan=1&billing=yearly", "en")).toEqual({
-      industry: "Cleaning",
+      industry: "Cleaning services",
       message: "Plan I'm interested in: middle plan, billed yearly.",
     });
     expect(demoPrefillFromSearch("?intent=demo&industry=build&plan=0&billing=monthly", "es")).toEqual({
-      industry: "Construcción",
+      industry: "Contratistas generales",
       message: "Plan que me interesa: plan de entrada, con pago mensual.",
     });
     expect(demoPrefillFromSearch("?intent=demo&industry=<script>&plan=9", "en")).toEqual({});
