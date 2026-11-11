@@ -14,7 +14,8 @@ export default function LegalPage({ doc }: { doc: LegalKey }) {
   const { t, lang } = useLang();
   const content = LEGAL[doc][lang];
 
-  const date = new Date(LEGAL_EFFECTIVE_DATE).toLocaleDateString(
+  // noon, so the date never shifts to the day before in a US time zone
+  const date = new Date(`${content.effective ?? LEGAL_EFFECTIVE_DATE}T12:00:00`).toLocaleDateString(
     lang === "es" ? "es-US" : "en-US",
     { year: "numeric", month: "long", day: "numeric" },
   );
@@ -58,6 +59,14 @@ export default function LegalPage({ doc }: { doc: LegalKey }) {
                     ))}
                   </ul>
                 ) : null}
+                {section.after?.map((p) => (
+                  <p
+                    key={p.slice(0, 40)}
+                    className="mt-3 leading-relaxed text-vx-muted"
+                  >
+                    {p}
+                  </p>
+                ))}
               </section>
             ))}
           </div>
