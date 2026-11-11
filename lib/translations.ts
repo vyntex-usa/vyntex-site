@@ -416,8 +416,8 @@ const en = {
       },
       BrandBundle: {
         name: "Brand Bundle",
-        tagline: "Logo + business card + flyer.",
-        features: ["Logo design", "Business card", "Flyer design"],
+        tagline: "Logo + business card + flyer + social media + WhatsApp.",
+        features: ["Logo design", "Business card", "Flyer design", "Facebook + Instagram accounts created & branded", "WhatsApp Business branded"],
       },
       BrandKit: {
         name: "Full Brand Kit",
@@ -1828,8 +1828,8 @@ const es: Dict = {
       },
       BrandBundle: {
         name: "Paquete de Marca",
-        tagline: "Logo + tarjeta + volante.",
-        features: ["Diseño de logo", "Tarjeta de presentación", "Diseño de volante"],
+        tagline: "Logo + tarjeta + volante + redes sociales + WhatsApp.",
+        features: ["Diseño de logo", "Tarjeta de presentación", "Diseño de volante", "Facebook + Instagram creados y con tu marca", "WhatsApp Business con tu marca"],
       },
       BrandKit: {
         name: "Kit de Marca Completo",

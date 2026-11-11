@@ -980,8 +980,8 @@ export const SERVICES: ServiceItem[] = [
       "es": "Paquete de marca"
     },
     "line": {
-      "en": "Logo, business card and flyer, designed to match.",
-      "es": "Logo, tarjeta de presentación y volante, diseñados para combinar."
+      "en": "Logo, business card and flyer, designed to match, plus your social media accounts and WhatsApp Business created and branded.",
+      "es": "Logo, tarjeta de presentación y volante, diseñados para combinar, más sus redes sociales y WhatsApp Business creados y con su marca."
     },
     "bestFor": {
       "en": "A business that needs something to hand people",
@@ -992,6 +992,8 @@ export const SERVICES: ServiceItem[] = [
         "Logo design, two concepts",
         "Business card design, print ready",
         "Flyer design, print ready",
+        "Facebook and Instagram business accounts created and branded with your logo, cover, bio and links",
+        "WhatsApp Business set up and branded: logo, business profile, hours, greeting and quick replies",
         "Three rounds of revisions",
         "All final files are yours"
       ],
@@ -999,6 +1001,8 @@ export const SERVICES: ServiceItem[] = [
         "Diseño de logo, dos conceptos",
         "Diseño de tarjeta de presentación, lista para imprimir",
         "Diseño de volante, listo para imprimir",
+        "Cuentas de negocio en Facebook e Instagram creadas y con su marca: logo, portada, bio y enlaces",
+        "WhatsApp Business configurado con su marca: logo, perfil de negocio, horario, saludo y respuestas rápidas",
         "Tres rondas de revisiones",
         "Todos los archivos finales son suyos"
       ]
