@@ -21,6 +21,8 @@ export interface LegalSection {
   heading: string;
   paragraphs: string[];
   bullets?: string[];
+  /** Paragraphs shown after the bullets. */
+  after?: string[];
 }
 
 export interface LegalDocument {
@@ -28,6 +30,8 @@ export interface LegalDocument {
   updated: string;
   intro: string;
   sections: LegalSection[];
+  /** The date this document last changed, when it differs from LEGAL_EFFECTIVE_DATE (YYYY-MM-DD). */
+  effective?: string;
 }
 
 type Lang = "en" | "es";
@@ -37,6 +41,7 @@ const CONTACT = `${SITE.email} · ${SITE.phone} · ${SITE.address.locality}, ${S
 // ---------------------------------------------------------------- PRIVACY
 const privacyEn: LegalDocument = {
   title: "Privacy Policy",
+  effective: "2026-11-12",
   updated: "Last updated",
   intro:
     "This policy explains what VYNTEX collects, why, and what we do with it. It describes how this website actually behaves — not a generic template.",
@@ -105,13 +110,29 @@ const privacyEn: LegalDocument = {
       ],
     },
     {
-      heading: "9. Children",
+      heading: "9. Google user data in VYNTEX ERP",
+      paragraphs: [
+        "When a company connects a Google account in VYNTEX ERP (Settings, Integrations), VYNTEX ERP asks Google only for what each connection needs:",
+      ],
+      bullets: [
+        "Gmail (send only): to send the emails a person chooses to send from VYNTEX ERP, such as invoices, contracts, signature requests and messages to their own clients, from that person's own address. VYNTEX ERP does not read, search or store the mailbox.",
+        "Google Calendar and Google Meet: to create a separate \"VYNTEX ERP\" calendar in the connected account, keep the company's appointments on it, and add Google Meet links to video appointments. VYNTEX ERP works only with the calendar it creates, never with the account's other calendars.",
+        "Email address and basic profile: to show which Google account is connected.",
+      ],
+      after: [
+        "Access tokens are stored encrypted and are used only to perform these actions for the company that connected them. VYNTEX ERP does not sell Google user data, does not use it for advertising, and does not use it to develop, improve or train generalized AI or machine learning models. People at VYNTEX do not read it, except with the user's permission, for security, or where the law requires.",
+        "A connection can be removed at any time with Disconnect on the Integrations screen, which deletes its stored tokens. Access can also be removed from the Google account at myaccount.google.com/permissions.",
+        "VYNTEX ERP's use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.",
+      ],
+    },
+    {
+      heading: "10. Children",
       paragraphs: [
         "This is a service for businesses. It is not directed to children, and we do not knowingly collect information from anyone under 18.",
       ],
     },
     {
-      heading: "10. Changes",
+      heading: "11. Changes",
       paragraphs: [
         "If we change this policy we will update the date above. Material changes will be communicated to account holders by email.",
       ],
@@ -121,6 +142,7 @@ const privacyEn: LegalDocument = {
 
 const privacyEs: LegalDocument = {
   title: "Política de Privacidad",
+  effective: "2026-11-12",
   updated: "Última actualización",
   intro:
     "Esta política explica qué recopila VYNTEX, por qué, y qué hacemos con ello. Describe cómo se comporta realmente este sitio — no es una plantilla genérica.",
@@ -189,13 +211,29 @@ const privacyEs: LegalDocument = {
       ],
     },
     {
-      heading: "9. Menores",
+      heading: "9. Datos de Google en VYNTEX ERP",
+      paragraphs: [
+        "Cuando una empresa conecta una cuenta de Google en VYNTEX ERP (Configuración, Integraciones), VYNTEX ERP le pide a Google solo lo que cada conexión necesita:",
+      ],
+      bullets: [
+        "Gmail (solo enviar): para enviar los correos que una persona decide enviar desde VYNTEX ERP, como facturas, contratos, solicitudes de firma y mensajes a sus propios clientes, desde su propia dirección. VYNTEX ERP no lee, no busca y no guarda el buzón.",
+        "Google Calendar y Google Meet: para crear un calendario aparte llamado \"VYNTEX ERP\" en la cuenta conectada, mantener allí las citas de la empresa y agregar enlaces de Google Meet a las citas por video. VYNTEX ERP trabaja solo con el calendario que crea, nunca con los demás calendarios de la cuenta.",
+        "Correo y perfil básico: para mostrar qué cuenta de Google está conectada.",
+      ],
+      after: [
+        "Los tokens de acceso se guardan cifrados y se usan solo para hacer estas acciones para la empresa que los conectó. VYNTEX ERP no vende los datos de usuario de Google, no los usa para publicidad y no los usa para desarrollar, mejorar ni entrenar modelos generales de inteligencia artificial o aprendizaje automático. Nadie en VYNTEX los lee, salvo con el permiso del usuario, por seguridad o cuando la ley lo exige.",
+        "Una conexión se puede quitar en cualquier momento con Desconectar en la pantalla de Integraciones, que borra sus tokens guardados. El acceso también se puede quitar desde la cuenta de Google en myaccount.google.com/permissions.",
+        "El uso y la transferencia que VYNTEX ERP hace de la información recibida de las API de Google cumple con la Política de Datos de Usuario de los Servicios de API de Google, incluidos los requisitos de Uso Limitado.",
+      ],
+    },
+    {
+      heading: "10. Menores",
       paragraphs: [
         "Este es un servicio para negocios. No está dirigido a menores y no recopilamos información a sabiendas de personas menores de 18 años.",
       ],
     },
     {
-      heading: "10. Cambios",
+      heading: "11. Cambios",
       paragraphs: [
         "Si cambiamos esta política actualizaremos la fecha arriba. Los cambios importantes se comunicarán por correo a los titulares de cuenta.",
       ],
