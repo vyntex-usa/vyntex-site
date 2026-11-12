@@ -296,8 +296,8 @@ type Localized = { en: string; es: string };
 
 function recommend(text: string, lang: Lang): Reply | undefined {
   const hits = RECOMMEND_MAP.map((r) => ({ r, score: has(text, r.terms) })).filter((x) => x.score > 0).sort((a, b) => b.score - a.score);
-  if (hits.length === 0) return undefined;
-  const top = hits[0].r;
+  const top = hits[0]?.r;
+  if (!top) return undefined;
   const picks = top.ids.map((id) => SERVICES.find((s) => s.id === id)).filter(Boolean) as ServiceItem[];
   return {
     intent: "recommend.match",
