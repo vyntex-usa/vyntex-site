@@ -39,6 +39,8 @@ export interface Reply {
   actions?: Action[];
   /** Follow-up questions shown as chips under the answer. */
   suggestions?: string[];
+  /** Show the main menu (the goal tiles) under this answer. */
+  menu?: boolean;
 }
 
 /** What the conversation is currently about, so "how long?" knows what "it" is. */
@@ -70,6 +72,7 @@ const ES_MARKERS = [
   "que", "como", "cuanto", "cuesta", "precio", "quiero", "necesito", "tienen", "hacen", "pagina",
   "negocio", "hola", "gracias", "buenas", "puedo", "para", "mi", "una", "los", "las", "del", "por favor",
   "cuando", "donde", "llamar", "hablar", "espanol", "ingles", "cita", "consulta", "limpieza", "barberia",
+  "soy", "tengo", "manejo", "tienen", "busco", "quisiera", "ayuda", "negocios", "empresa",
 ];
 
 /** Guesses the language of what was typed; falls back to the page language. */
@@ -144,19 +147,21 @@ export function matchService(text: string): ServiceItem | undefined {
 // Knowledge: VYNTEX ERP editions
 // ---------------------------------------------------------------------------------------------
 
-export const EDITIONS: { id: string; en: string; es: string; terms: string[] }[] = [
-  { id: "contractors", en: "General Contractors", es: "Contratistas Generales", terms: ["contractor", "contratista", "construction", "construccion", "remodel", "remodelacion", "roofing", "techos", "builder", "handyman"] },
-  { id: "clean", en: "Cleaning Services", es: "Servicios de Limpieza", terms: ["cleaning", "limpieza", "janitorial", "maid", "housekeeping", "cleaners"] },
-  { id: "landscape", en: "Landscaping", es: "Jardinería y Paisajismo", terms: ["landscaping", "landscape", "lawn", "jardineria", "paisajismo", "hardscape", "jardin"] },
-  { id: "wash", en: "Pressure Washing", es: "Lavado a Presión", terms: ["pressure washing", "power washing", "lavado a presion", "window cleaning", "gutter", "canaletas"] },
-  { id: "haul", en: "Junk Removal and Moving", es: "Retiro de Basura y Mudanzas", terms: ["junk removal", "moving", "mudanza", "mudanzas", "hauling", "retiro de basura"] },
-  { id: "snow", en: "Snow Removal", es: "Remoción de Nieve", terms: ["snow", "nieve", "plowing", "salting"] },
-  { id: "turnover", en: "Property Turnover", es: "Preparación de Propiedades", terms: ["turnover", "make ready", "property management", "apartment turn", "preparacion de propiedades"] },
-  { id: "events", en: "Event Services", es: "Servicios para Eventos", terms: ["events", "event staffing", "eventos", "catering staff", "event setup"] },
-  { id: "hvac", en: "HVAC Contractors", es: "Contratistas de HVAC", terms: ["hvac", "heating", "air conditioning", "aire acondicionado", "calefaccion", "furnace"] },
-  { id: "plumbing", en: "Plumbing Contractors", es: "Contratistas de Plomería", terms: ["plumbing", "plumber", "plomeria", "plomero", "drain", "water heater"] },
-  { id: "practice", en: "Professional Services", es: "Servicios Profesionales", terms: ["tax", "taxes", "impuestos", "bookkeeping", "contabilidad", "accounting", "payroll", "nomina", "tax preparer", "cpa", "notary", "insurance agency", "law firm", "professional services"] },
-  { id: "barber", en: "Barbershops", es: "Barberías", terms: ["barber", "barbershop", "barberia", "barbero", "salon", "beauty", "grooming", "peluqueria"] },
+const TRADE: { en: string; es: string }[] = [{ en: "Jobs and crews in one schedule, with a portal for your crew", es: "Trabajos y cuadrillas en una sola agenda, con portal para tu equipo" }, { en: "W-9 and insurance uploads with expiry alerts, and 1099 tracking", es: "Carga de W-9 y seguros con alertas, y seguimiento 1099" }, { en: "Agreements, invoices and payments, with automatic client emails", es: "Acuerdos, facturas y pagos, con correos automáticos a clientes" }];
+
+export const EDITIONS: { id: string; en: string; es: string; terms: string[]; highlights: { en: string; es: string }[] }[] = [
+  { id: "contractors", en: "General Contractors", es: "Contratistas Generales", terms: ["contractor", "contratista", "construction", "construccion", "remodel", "remodelacion", "roofing", "techos", "builder", "handyman"], highlights: [{ en: "Projects, subcontractors and payments in one place", es: "Proyectos, subcontratistas y pagos en un solo lugar" }, { en: "Subcontractor portal, W-9 and insurance alerts, and 1099 tracking", es: "Portal de subcontratistas, alertas de W-9 y seguros, y seguimiento 1099" }, { en: "Agreements and invoices, plus profit reports by project on Pro", es: "Acuerdos y facturas, más reportes de ganancia por proyecto en Pro" }] },
+  { id: "clean", en: "Cleaning Services", es: "Servicios de Limpieza", terms: ["cleaning", "limpieza", "janitorial", "maid", "housekeeping", "cleaners"], highlights: TRADE },
+  { id: "landscape", en: "Landscaping", es: "Jardinería y Paisajismo", terms: ["landscaping", "landscape", "lawn", "jardineria", "paisajismo", "hardscape", "jardin"], highlights: TRADE },
+  { id: "wash", en: "Pressure Washing", es: "Lavado a Presión", terms: ["pressure washing", "power washing", "lavado a presion", "window cleaning", "gutter", "canaletas"], highlights: TRADE },
+  { id: "haul", en: "Junk Removal and Moving", es: "Retiro de Basura y Mudanzas", terms: ["junk removal", "moving", "mudanza", "mudanzas", "hauling", "retiro de basura"], highlights: TRADE },
+  { id: "snow", en: "Snow Removal", es: "Remoción de Nieve", terms: ["snow", "nieve", "plowing", "salting"], highlights: TRADE },
+  { id: "turnover", en: "Property Turnover", es: "Preparación de Propiedades", terms: ["turnover", "make ready", "property management", "apartment turn", "preparacion de propiedades"], highlights: TRADE },
+  { id: "events", en: "Event Services", es: "Servicios para Eventos", terms: ["events", "event staffing", "eventos", "catering staff", "event setup"], highlights: TRADE },
+  { id: "hvac", en: "HVAC Contractors", es: "Contratistas de HVAC", terms: ["hvac", "heating", "air conditioning", "aire acondicionado", "calefaccion", "furnace"], highlights: TRADE },
+  { id: "plumbing", en: "Plumbing Contractors", es: "Contratistas de Plomería", terms: ["plumbing", "plumber", "plomeria", "plomero", "drain", "water heater"], highlights: TRADE },
+  { id: "practice", en: "Professional Services", es: "Servicios Profesionales", terms: ["tax", "taxes", "impuestos", "bookkeeping", "contabilidad", "accounting", "payroll", "nomina", "tax preparer", "cpa", "notary", "insurance agency", "law firm", "professional services"], highlights: [{ en: "Clients, engagements and filing deadlines with reminders", es: "Clientes, encargos y fechas límite de declaraciones con recordatorios" }, { en: "A secure vault for tax IDs, with access approvals and a log", es: "Bóveda segura para números fiscales, con aprobaciones de acceso y registro" }, { en: "Your service catalog, contracts and invoices", es: "Tu catálogo de servicios, contratos y facturas" }] },
+  { id: "barber", en: "Barbershops", es: "Barberías", terms: ["barber", "barbershop", "barberia", "barbero", "salon", "beauty", "grooming", "peluqueria"], highlights: [{ en: "Appointments, online booking and a walk-in line with live wait times", es: "Citas, reservas en línea y fila de clientes sin cita con tiempo de espera en vivo" }, { en: "Check-in kiosk and a waiting-area TV board", es: "Kiosco de registro y pantalla de turnos para la sala de espera" }, { en: "Memberships, packages, gift cards and barber pay with tips", es: "Membresías, paquetes, tarjetas de regalo y pago a barberos con propinas" }] },
 ];
 
 export function matchEdition(text: string) {
@@ -178,18 +183,19 @@ const editionName = (e: (typeof EDITIONS)[number], lang: Lang) =>
 interface Intent { id: string; terms: string[]; weight?: number }
 
 const INTENTS: Intent[] = [
+  { id: "menu", terms: ["menu", "main menu", "start over", "go back", "back to menu", "options menu", "menu principal", "inicio", "volver", "empezar de nuevo", "regresar"], weight: 3 },
   { id: "greeting", terms: ["hi", "hello", "hey", "good morning", "good afternoon", "hola", "buenas", "buenos dias", "buenas tardes", "que tal"] },
   { id: "thanks", terms: ["thanks", "thank you", "gracias", "muchas gracias", "perfect thanks", "great thanks"] },
   { id: "bye", terms: ["bye", "goodbye", "adios", "hasta luego", "nos vemos"] },
   { id: "who", terms: ["who are you", "are you a bot", "are you human", "are you ai", "quien eres", "eres un bot", "eres humano", "what are you"] },
-  { id: "about", terms: ["about vyntex", "who is vyntex", "what is vyntex", "que es vyntex", "quienes son", "about you", "company", "empresa"] },
+  { id: "about", terms: ["about vyntex", "who is vyntex", "what is vyntex", "que es vyntex", "quienes son", "about you", "about your company"] },
   { id: "pricing", terms: ["price", "prices", "pricing", "cost", "costs", "how much", "rates", "fee", "fees", "quote", "budget", "expensive", "cheap", "precio", "precios", "cuanto cuesta", "cuanto cobran", "cotizacion", "presupuesto", "tarifa"], weight: 2 },
   { id: "services", terms: ["services", "what do you build", "what do you do", "what do you offer", "offer", "options", "packages", "servicios", "que ofrecen", "paquetes", "que hacen", "que construyen"] },
   { id: "timeline", terms: ["how long", "timeline", "when ready", "ready in", "turnaround", "how fast", "delivery time", "cuanto tiempo", "cuanto tarda", "plazo", "tiempo de entrega", "cuando estaria"], weight: 2 },
   { id: "included", terms: ["included", "includes", "what do i get", "what comes with", "incluye", "que incluye", "que trae"], weight: 2 },
   { id: "excluded", terms: ["not included", "excluded", "extra cost", "hidden fees", "hosting", "domain", "third party", "no incluye", "costos extra", "dominio", "cargos ocultos"], weight: 2 },
   { id: "consultation", terms: ["book", "schedule", "appointment", "consultation", "meeting", "call me", "agendar", "cita", "consulta", "reunion", "llamenme", "quiero empezar", "get started", "start", "empezar", "sign up"], weight: 2 },
-  { id: "contact", terms: ["contact", "phone", "number", "email", "whatsapp", "address", "where are you", "location", "office", "contacto", "telefono", "correo", "direccion", "donde estan", "oficina", "human", "person", "talk to someone", "talk to a person", "agent", "persona", "humano", "representative", "hablar con alguien"], weight: 3 },
+  { id: "contact", terms: ["contact", "phone", "number", "email", "whatsapp", "address", "where are you", "location", "your office", "where is your office", "contacto", "telefono", "correo", "direccion", "donde estan", "oficina", "human", "person", "talk to someone", "talk to a person", "agent", "persona", "humano", "representative", "hablar con alguien"], weight: 3 },
   { id: "hours", terms: ["hours", "open", "when are you open", "horario", "abren", "que hora"] },
   { id: "languages", terms: ["spanish", "english", "bilingual", "espanol", "ingles", "bilingue", "language", "idioma", "hablan espanol", "do you speak"] },
   { id: "support", terms: ["support", "maintenance", "changes", "after launch", "updates", "soporte", "mantenimiento", "cambios", "actualizaciones", "help after"] },
@@ -273,7 +279,7 @@ function editionReply(e: (typeof EDITIONS)[number], lang: Lang): Reply {
       `${editionName(e, lang)} maneja toda la operación en un solo lugar: prospectos, clientes, agenda, documentos, pagos, tu equipo y reportes, con las palabras de tu industria. Puedes abrir la demo en vivo ahora mismo con una empresa de ejemplo, sin crear cuenta.`,
     ),
     lines: [
-      L(lang, "Three plans for every industry: Basic, Essential and Pro", "Tres planes para cada industria: Básico, Esencial y Pro"),
+      ...e.highlights.map((h) => h[lang]),
       L(lang, "7-day free trial with every feature open", "Prueba gratis de 7 días con todo abierto"),
       L(lang, "Setup done together with you, in English or Spanish", "La instalación la hacemos contigo, en inglés o español"),
     ],
@@ -285,7 +291,7 @@ function editionReply(e: (typeof EDITIONS)[number], lang: Lang): Reply {
 const RECOMMEND_MAP: { terms: string[]; ids: string[]; reason: Localized }[] = [
   { terms: ["missed calls", "answer calls", "after hours", "llamadas perdidas", "contestar", "phone", "telefono"], ids: ["aifront", "crm-premium"], reason: { en: "You're losing calls. These answer the phone for you, day and night, in both languages.", es: "Estás perdiendo llamadas. Esto contesta por ti, de día y de noche, en los dos idiomas." } },
   { terms: ["website", "web site", "site", "pagina", "sitio", "online presence", "presencia"], ids: ["web-std", "starter"], reason: { en: "You need to be found and look professional online.", es: "Necesitas que te encuentren y verte profesional en internet." } },
-  { terms: ["follow up", "leads", "forgotten", "seguimiento", "prospectos", "clientes se olvidan", "more clients", "mas clientes"], ids: ["growth", "crm-standard"], reason: { en: "Nobody who contacts you should be forgotten. These answer, follow up and remind for you.", es: "Nadie que te contacte debe quedar olvidado. Esto responde, da seguimiento y recuerda por ti." } },
+  { terms: ["follow up", "leads", "forgotten", "seguimiento", "prospectos", "clientes se olvidan", "more clients", "more customers", "get customers", "mas clientes", "conseguir clientes"], ids: ["growth", "crm-standard"], reason: { en: "Nobody who contacts you should be forgotten. These answer, follow up and remind for you.", es: "Nadie que te contacte debe quedar olvidado. Esto responde, da seguimiento y recuerda por ti." } },
   { terms: ["logo", "brand", "marca", "business card", "tarjeta", "flyer", "volante", "new business", "negocio nuevo"], ids: ["brand-bundle", "brand-kit"], reason: { en: "A new or refreshed brand, with your social accounts and WhatsApp Business set up to match.", es: "Una marca nueva o renovada, con tus redes y WhatsApp Business configurados para combinar." } },
   { terms: ["social", "instagram", "facebook", "tiktok", "redes", "posts", "publicaciones"], ids: ["social-mgmt", "brand-bundle"], reason: { en: "Consistent posting without you doing it.", es: "Publicaciones constantes sin que tengas que hacerlo tú." } },
   { terms: ["automate", "automation", "repetitive", "manual", "automatizar", "automatizacion", "repetitivo"], ids: ["ai-standard", "ai-simple"], reason: { en: "Take repetitive work off your team.", es: "Quitarle trabajo repetitivo a tu equipo." } },
@@ -358,6 +364,7 @@ export function respond(input: string, pageLang: Lang, ctx: Context = {}): { rep
   }
 
   switch (top) {
+    case "menu": return done(mainMenu(lang));
     case "greeting": return done(welcome(lang));
     case "thanks": return done({ intent: "thanks", text: L(lang, "You're welcome. Anything else I can help with?", "Con gusto. ¿Te ayudo con algo más?"), suggestions: starterChips(lang) });
     case "bye": return done({ intent: "bye", text: L(lang, `Thanks for stopping by. When you're ready, we're one message away at ${SITE.phone}.`, `Gracias por visitarnos. Cuando quieras, estamos a un mensaje al ${SITE.phone}.`), actions: [bookAction(lang), whatsapp(lang)] });
@@ -391,20 +398,32 @@ export function respond(input: string, pageLang: Lang, ctx: Context = {}): { rep
 export function welcome(lang: Lang): Reply {
   return {
     intent: "welcome",
-    text: L(lang, "Hi, I'm the VYNTEX Assistant. Ask me anything about our websites, CRM, AI automation, branding, VYNTEX ERP, or how to get started. Type a question or pick one below.", "Hola, soy el Asistente de VYNTEX. Pregúntame lo que quieras sobre páginas web, CRM, automatización con IA, marca, VYNTEX ERP o cómo empezar. Escribe tu pregunta o elige una abajo."),
-    suggestions: starterChips(lang),
+    text: L(lang, "Hi, I'm the VYNTEX Assistant. Tell me what you want to fix and I'll show you exactly how we solve it, in seconds. Pick a goal or type your question.", "Hola, soy el Asistente de VYNTEX. Dime qué quieres resolver y te muestro exactamente cómo lo solucionamos, en segundos. Elige una meta o escribe tu pregunta."),
+    menu: true,
   };
 }
 
-export function starterChips(lang: Lang): string[] {
+/** The main menu: same goals as the welcome, reachable any time ("menu", the header button or the chip). */
+export function mainMenu(lang: Lang): Reply {
+  return { intent: "menu", text: L(lang, "Main menu. What would you like to solve?", "Menú principal. ¿Qué te gustaría resolver?"), menu: true };
+}
+
+export interface Goal { id: string; icon: "phone" | "growth" | "web" | "erp" | "brand" | "price"; title: string; sub: string; ask: string }
+
+/** The six goals on the welcome card. Each one asks the engine a question it answers well. */
+export function goals(lang: Lang): Goal[] {
   return [
-    L(lang, "What do I need for my business?", "¿Qué necesito para mi negocio?"),
-    L(lang, "What do you do?", "¿Qué hacen?"),
-    L(lang, "What does it cost?", "¿Cuánto cuesta?"),
-    L(lang, "Tell me about VYNTEX ERP", "Cuéntame de VYNTEX ERP"),
-    L(lang, "I keep missing calls", "Se me pierden llamadas"),
-    L(lang, "Talk to a person", "Hablar con una persona"),
+    { id: "calls", icon: "phone", title: L(lang, "Stop missing calls", "No perder más llamadas"), sub: L(lang, "Answer 24/7 in English and Spanish", "Contesta 24/7 en inglés y español"), ask: L(lang, "I keep missing calls", "Se me pierden llamadas") },
+    { id: "customers", icon: "growth", title: L(lang, "Get more customers", "Conseguir más clientes"), sub: L(lang, "Every lead answered and followed up", "Cada prospecto atendido y con seguimiento"), ask: L(lang, "I want more customers", "Quiero conseguir más clientes") },
+    { id: "website", icon: "web", title: L(lang, "A website that sells", "Una página web que vende"), sub: L(lang, "Fast, mobile, with booking", "Rápida, móvil y con reservas"), ask: L(lang, "I need a website", "Necesito una página web") },
+    { id: "erp", icon: "erp", title: L(lang, "Run my business in one place", "Manejar mi negocio en un solo lugar"), sub: L(lang, "VYNTEX ERP for your industry", "VYNTEX ERP para tu industria"), ask: L(lang, "I want software to run my business", "Quiero un software para manejar mi negocio") },
+    { id: "brand", icon: "brand", title: L(lang, "Look professional", "Verme profesional"), sub: L(lang, "Logo, cards, social and WhatsApp", "Logo, tarjetas, redes y WhatsApp"), ask: L(lang, "I need a brand for my business", "Necesito una marca para mi negocio") },
+    { id: "price", icon: "price", title: L(lang, "What does it cost?", "¿Cuánto cuesta?"), sub: L(lang, "How pricing and the free consultation work", "Cómo funcionan los precios y la consulta gratis"), ask: L(lang, "What does it cost?", "¿Cuánto cuesta?") },
   ];
+}
+
+export function starterChips(lang: Lang): string[] {
+  return goals(lang).map((g) => g.ask);
 }
 
 function who(lang: Lang): Reply {
@@ -594,7 +613,7 @@ function erpReply(lang: Lang): Reply {
 function erpPlans(lang: Lang, industry?: string): Reply {
   return {
     intent: "erp.plans",
-    text: L(lang, "VYNTEX ERP has the same three plans for every industry, with monthly or yearly billing and no setup fee:", "VYNTEX ERP tiene los mismos tres planes para cada industria, con pago mensual o anual y sin costo de instalación:"),
+    text: L(lang, "VYNTEX ERP has three plans, with monthly or yearly billing and no setup fee:", "VYNTEX ERP tiene tres planes, con pago mensual o anual y sin costo de instalación:"),
     lines: [
       L(lang, "Basic: for the owner working alone. Every core feature, agreements and invoices", "Básico: para el dueño que trabaja solo. Todas las funciones principales, acuerdos y facturas"),
       L(lang, "Essential (most popular): up to 5 users, worker portal, 1099 tracking, VYNTEX AI for questions, two-way Google Calendar and automatic client emails", "Esencial (el más popular): hasta 5 usuarios, portal del equipo, seguimiento 1099, VYNTEX AI para preguntas, Google Calendar en ambos sentidos y correos automáticos a clientes"),

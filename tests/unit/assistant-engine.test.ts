@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { respond, detectLang, matchEdition, type Context } from "@/lib/assistant/engine";
+import { respond, detectLang, matchEdition, goals, type Context } from "@/lib/assistant/engine";
 import { RESELLER_PROGRAM } from "@/lib/reseller-program";
 
 const intent = (q: string, lang: "en" | "es" = "en", ctx: Context = {}) => respond(q, lang, ctx).reply.intent;
@@ -78,5 +78,20 @@ describe("VYNTEX Assistant engine", () => {
     const all = [r.text, ...(r.lines ?? [])].join(" ");
     expect(all).toContain("609-780-3218");
     expect(all).not.toContain("813-0633");
+  });
+
+  it("every welcome goal gets a real answer, in both languages", () => {
+    for (const lang of ["en", "es"] as const) {
+      for (const g of goals(lang)) expect(intent(g.ask, lang), g.ask).not.toBe("fallback");
+    }
+    expect(goals("en")).toHaveLength(6);
+  });
+
+  it("menu commands bring back the main menu", () => {
+    for (const q of ["menu", "main menu", "start over", "volver al menu"]) {
+      const r = respond(q, "en").reply;
+      expect(r.intent, q).toBe("menu");
+      expect(r.menu, q).toBe(true);
+    }
   });
 });
