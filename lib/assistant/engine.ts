@@ -628,7 +628,7 @@ function erpPlans(lang: Lang, industry?: string): Reply {
 function erpTrialReply(lang: Lang, industry?: string): Reply {
   return {
     intent: "erp.trial",
-    text: L(lang, "You can try VYNTEX ERP free for 7 days with every feature open. Sign up from erp.vyntexusa.com, pick your industry, and you get your own workspace. When the trial ends, you choose Basic, Essential or Pro.", "Puedes probar VYNTEX ERP gratis por 7 días con todas las funciones abiertas. Regístrate en erp.vyntexusa.com, elige tu industria y recibes tu propio espacio de trabajo. Al terminar la prueba eliges Básico, Esencial o Pro."),
+    text: L(lang, "You can try VYNTEX ERP free for 7 days with every feature open. Sign up from erp.vyntexusa.com, pick your industry, and you get your own workspace. You choose Basic, Essential or Pro when you add your card, and nothing is charged today. The 7 days start then, we remind you 3 days and 1 day before the first charge, and you can cancel from Settings, Billing at any time. If you do not cancel, the plan you chose starts when the 7 days end.", "Puedes probar VYNTEX ERP gratis por 7 días con todas las funciones abiertas. Regístrate en erp.vyntexusa.com, elige tu industria y recibes tu propio espacio de trabajo. Eliges Básico, Esencial o Pro cuando agregas tu tarjeta, y hoy no se cobra nada. Los 7 días empiezan en ese momento, te avisamos 3 días y 1 día antes del primer cobro, y puedes cancelar desde Configuración, Facturación cuando quieras. Si no cancelas, el plan que elegiste empieza al terminar los 7 días."),
     actions: [erpTrial(lang), erpDemo(lang, industry), erpPricing(lang, industry)],
   };
 }
