@@ -1,25 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { MessageSquare, X, ArrowLeft, Send, Bot } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { MessageSquare, X, ArrowLeft, Send, Bot, Phone, Mail, ExternalLink, CalendarCheck, MessageCircle, RotateCcw } from "lucide-react";
 import { useLang } from "@/context/LanguageContext";
-import { RESELLER_PROGRAM } from "@/lib/reseller-program";
-import { SITE, SECTION_IDS } from "@/lib/site";
-import { openConsultation } from "@/components/BookConsultation";
+import { SITE, SECTION_IDS, CONTACT_HREFS } from "@/lib/site";
+import { openConsultation, openConsultationFor, openDemoRequest } from "@/components/BookConsultation";
+import { respond, welcome, EDITIONS, WHATSAPP_URL, type Action, type Context, type Reply } from "@/lib/assistant/engine";
 
 /**
  * VYNTEX Assistant.
  *
- * HONEST BY DESIGN. This is a deterministic assistant that answers from the
- * site's own published data (lib/site.ts, lib/translations.ts).
- * It is NOT a large language model, and it does not pretend to be one — the
- * disclosure at the top of the panel says exactly that.
+ * HONEST BY DESIGN. A deterministic, bilingual assistant (lib/assistant/engine.ts)
+ * that understands typed questions and answers only from the site's own
+ * published data: the services catalog, the AI Blueprint, the reseller terms,
+ * the contact details and the VYNTEX ERP editions. It is not a large language
+ * model and it costs nothing to run: every answer is computed in the browser.
  *
- * Why not wire an LLM in? Because an LLM that hallucinates a price, a timeline,
- * or a guarantee would be a liability. Service prices are NOT published on the
- * website — they are quoted after a consultation — so this assistant never
- * states one. It does not import the price book at all. For anything outside
- * its scope it hands the visitor to a human rather than guessing.
+ * It never states a service price (those are quoted after a consultation) and
+ * links to erp.vyntexusa.com/pricing for software prices instead of copying
+ * them. For anything outside its knowledge it hands the visitor to a person.
  */
 
 type TopicKey =
@@ -39,6 +38,8 @@ interface Message {
   text: string;
   /** Rendered as a bulleted list under the message. */
   lines?: string[];
+  actions?: Action[];
+  suggestions?: string[];
 }
 
 const TOPICS: TopicKey[] = [
@@ -53,19 +54,70 @@ const TOPICS: TopicKey[] = [
   "contact",
 ];
 
+const STORE_KEY = "vx-assistant-v2";
+
+function readStore(): { messages: Message[]; ctx: Context } | null {
+  try {
+    const raw = window.sessionStorage.getItem(STORE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed?.messages)) return null;
+    return { messages: parsed.messages.slice(-40), ctx: parsed.ctx ?? {} };
+  } catch {
+    return null;
+  }
+}
+
+function writeStore(messages: Message[], ctx: Context) {
+  try {
+    window.sessionStorage.setItem(STORE_KEY, JSON.stringify({ messages: messages.slice(-40), ctx }));
+  } catch {
+    /* private mode or storage blocked: the chat still works for this visit */
+  }
+}
+
+const ICONS: Record<Action["kind"], typeof Send> = {
+  book: CalendarCheck,
+  demo: CalendarCheck,
+  link: ExternalLink,
+  whatsapp: MessageCircle,
+  call: Phone,
+  email: Mail,
+};
+
 export default function Chatbot() {
   const { t, lang } = useLang();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [typing, setTyping] = useState(false);
+  const [draft, setDraft] = useState("");
+  const ctxRef = useRef<Context>({});
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const counter = useRef(0);
+  const restored = useRef(false);
 
   const c = t.chat;
 
-  // ESC closes, and focus returns to the trigger — never stranded.
+  // Bring back this visit's conversation when the panel first opens.
+  useEffect(() => {
+    if (!open || restored.current) return;
+    restored.current = true;
+    const saved = readStore();
+    if (saved && saved.messages.length > 0) {
+      ctxRef.current = saved.ctx;
+      counter.current = Math.max(...saved.messages.map((m) => m.id), 0);
+      setMessages(saved.messages);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (restored.current) writeStore(messages, ctxRef.current);
+  }, [messages]);
+
+  // ESC closes, and focus returns to the trigger. Opening focuses the question box.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -75,160 +127,87 @@ export default function Chatbot() {
       }
     };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    const id = window.setTimeout(() => {
+      if (window.matchMedia("(min-width: 640px)").matches) inputRef.current?.focus();
+    }, 60);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      window.clearTimeout(id);
+    };
   }, [open]);
 
   // Keep the newest message in view.
   useEffect(() => {
-    if (logRef.current) {
-      logRef.current.scrollTop = logRef.current.scrollHeight;
-    }
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [messages, typing]);
 
-  /** Builds an answer. States no service prices — those are quoted after a consultation. */
-  const answer = useCallback(
-    (topic: TopicKey): { text: string; lines?: string[] } => {
-      const es = lang === "es";
-      switch (topic) {
-        case "pricing":
-          return {
-            text: es
-              ? "No publicamos precios, porque el paquete adecuado depende de tu negocio. Así funciona:"
-              : "We don't publish prices, because the right package depends on your business. Here is how it works:",
-            lines: [
-              es
-                ? "Agenda una consulta gratis de 30 minutos"
-                : "Book a free 30-minute consultation",
-              es
-                ? "Te recomendamos el paquete que mejor te conviene y te explicamos su precio"
-                : "We recommend the package that fits and walk you through its pricing",
-              es
-                ? "¿Algo a la medida? Empezamos con un Plan de IA (AI Blueprint) que define qué construir"
-                : "Something custom? We start with an AI Blueprint that plans what to build",
-              es
-                ? "Las tarifas de plataformas de terceros se facturan por separado"
-                : "Third-party platform fees are billed separately",
-            ],
-          };
+  const push = useCallback((m: Omit<Message, "id">) => {
+    counter.current += 1;
+    const msg = { ...m, id: counter.current };
+    setMessages((prev) => [...prev, msg].slice(-40));
+  }, []);
 
-        case "services":
-          return {
-            text: es ? "Esto es lo que construimos:" : "This is what we build:",
-            lines: [
-              es ? "Sitios web (básico, estándar, a medida)" : "Websites (basic, standard, custom)",
-              es ? "Automatización con IA y chatbots" : "AI automation and chatbots",
-              es ? "Sistemas CRM y embudos de venta" : "CRM systems and sales pipelines",
-              es ? "Imagen de marca e identidad" : "Branding and identity",
-              es ? "Redes sociales y marketing digital" : "Social media and digital marketing",
-            ],
-          };
-
-        case "timeline":
-          return {
-            text: es
-              ? "Cada servicio en nuestra página muestra un tiempo aproximado de entrega. Su propuesta por escrito confirma el plazo exacto de su proyecto, y respondemos en un día hábil. Agende una consulta gratis de 30 minutos para conocer el plazo real de su proyecto."
-              : "Each service on our Services page shows a typical ready-in time. Your written proposal confirms the exact timeline for your project, and we reply within one business day. Book a free 30-minute consultation to get your real timeline.",
-          };
-
-        case "included":
-          return {
-            text: es ? "Cada proyecto incluye:" : "Every project includes:",
-            lines: [
-              es
-                ? "Una propuesta por escrito con el alcance antes de empezar"
-                : "A written proposal with the scope before we start",
-              es ? "Construcción y entrega técnica por VYNTEX" : "Build and technical delivery by VYNTEX",
-              es ? "Servicio en inglés y español" : "Service in English and Spanish",
-            ],
-          };
-
-        case "thirdParty":
-          return {
-            text: es
-              ? "Nuestras cotizaciones cubren nuestro trabajo. NO incluyen:"
-              : "Our quotes cover our work. They do NOT include:",
-            lines: [
-              es ? "Hosting y dominios" : "Hosting and domains",
-              es ? "Licencias de software o CRM" : "Software or CRM licenses",
-              es ? "Envío de correos y SMS" : "Email and SMS sending",
-              es ? "Pauta publicitaria" : "Advertising spend",
-              es ? "Plugins premium e imágenes de stock" : "Premium plugins and stock assets",
-              es
-                ? "Esos los cobra el proveedor directamente a ti. Te decimos el costo antes de empezar."
-                : "Those are billed by the provider, directly to you. We tell you the cost before we start.",
-            ],
-          };
-
-        case "reseller":
-          return {
-            text: es
-              ? "El Programa de Revendedor Autorizado te permite ofrecer los servicios de VYNTEX a tus propios clientes:"
-              : "The Authorized Reseller Program lets you offer VYNTEX services to your own clients:",
-            lines: [
-              es
-                ? `Activación anual de ${RESELLER_PROGRAM.activationFee}`
-                : `${RESELLER_PROGRAM.activationFee} annual activation`,
-              es
-                ? `Mínimo de ${RESELLER_PROGRAM.minimumResalesPerYear} reventas por periodo de 12 meses`
-                : `Minimum of ${RESELLER_PROGRAM.minimumResalesPerYear} resales per 12-month period`,
-              es
-                ? "Se requiere aprobación y firmar el acuerdo"
-                : "Approval and a signed agreement are required",
-              es
-                ? "El precio mayorista es confidencial y se abre tras la activación"
-                : "Wholesale pricing is confidential and opens after activation",
-              es
-                ? "VYNTEX maneja la entrega técnica; tú manejas al cliente"
-                : "VYNTEX handles technical delivery; you handle the client",
-            ],
-          };
-
-        case "support":
-          return {
-            text: es
-              ? "Tu propuesta por escrito indica el soporte incluido y cómo se manejan los cambios después de la entrega. Si tienes una pregunta sobre un proyecto activo, agenda una consulta o escríbenos."
-              : "Your written proposal spells out the support included and how changes are handled after delivery. If you have a question about an active project, book a consultation or message us.",
-          };
-
-        case "languages":
-          return {
-            text: es
-              ? `Sí. Todo lo que hacemos está disponible en inglés y español — la conversación, tu sitio, tus automatizaciones y tu soporte. Llámanos o escríbenos por WhatsApp al ${SITE.phone}.`
-              : `Yes. Everything we do is available in English and Spanish — the conversation, your site, your automations, and your support. Call or WhatsApp us at ${SITE.phone}.`,
-          };
-
-        case "contact":
-          return {
-            text: es
-              ? `Con gusto. Escríbenos a ${SITE.email}, llámanos o escríbenos por WhatsApp al ${SITE.phone}, o agenda una consulta gratis de 30 minutos abajo. Respondemos en un día hábil.`
-              : `Happy to. Email ${SITE.email}, call or WhatsApp ${SITE.phone}, or book a free 30-minute consultation below. We reply within one business day.`,
-          };
-      }
+  const ask = useCallback(
+    (question: string) => {
+      const q = question.trim().slice(0, 500);
+      if (!q || typing) return;
+      push({ from: "user", text: q });
+      setTyping(true);
+      const { reply, ctx } = respond(q, lang, ctxRef.current);
+      ctxRef.current = ctx;
+      // A short beat so the answer doesn't teleport in and get missed by a screen reader.
+      window.setTimeout(() => {
+        push(toMessage(reply));
+        setTyping(false);
+      }, 380);
     },
-    [lang],
+    [lang, push, typing],
   );
 
-  const ask = (topic: TopicKey) => {
-    const label = c.topics[topic];
-    counter.current += 1;
-    const userMsg: Message = { id: counter.current, from: "user", text: label };
-    setMessages((prev) => [...prev, userMsg]);
-    setTyping(true);
-
-    // A short, honest "typing" beat. Not fake latency for drama — just enough
-    // that the answer doesn't teleport in and get missed by a screen reader.
-    window.setTimeout(() => {
-      const reply = answer(topic);
-      counter.current += 1;
-      setMessages((prev) => [
-        ...prev,
-        { id: counter.current, from: "bot", text: reply.text, lines: reply.lines },
-      ]);
-      setTyping(false);
-    }, 450);
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const q = draft;
+    setDraft("");
+    ask(q);
   };
 
-  const reset = () => setMessages([]);
+  const reset = () => {
+    ctxRef.current = {};
+    setMessages([]);
+    setDraft("");
+    inputRef.current?.focus();
+  };
+
+  const runAction = (a: Action) => {
+    switch (a.kind) {
+      case "book":
+        setOpen(false);
+        if (a.services || a.message) openConsultationFor({ services: a.services, message: a.message });
+        else openConsultation();
+        return;
+      case "demo":
+        setOpen(false);
+        {
+          const e = EDITIONS.find((x) => x.id === a.industry);
+          openDemoRequest(e ? { industry: lang === "es" ? e.es : e.en } : {});
+        }
+        return;
+      default:
+        return;
+    }
+  };
+
+  const actionHref = (a: Action): string | undefined => {
+    if (a.kind === "link") return a.href;
+    if (a.kind === "whatsapp") return WHATSAPP_URL;
+    if (a.kind === "call") return CONTACT_HREFS.phone;
+    if (a.kind === "email") return CONTACT_HREFS.email;
+    return undefined;
+  };
+
+  const lastBot = [...messages].reverse().find((m) => m.from === "bot");
+  const chips = messages.length === 0 ? null : lastBot?.suggestions ?? null;
+  const intro = welcome(lang);
 
   return (
     <>
@@ -240,29 +219,46 @@ export default function Chatbot() {
         aria-expanded={open}
         aria-controls="vx-chat-panel"
         aria-label={open ? c.close : c.open}
-        className="fixed bottom-5 right-5 z-40 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-vx-blue to-vx-cyan text-vx-onaccent shadow-vx-glow transition-transform motion-safe:hover:scale-105 lg:bottom-8 lg:right-8"
+        className={`fixed bottom-5 right-5 z-40 h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-vx-blue to-vx-cyan text-vx-onaccent shadow-vx-glow transition-transform motion-safe:hover:scale-105 lg:bottom-8 lg:right-8 ${open ? "hidden sm:grid" : "grid"}`}
       >
         {open ? <X size={22} aria-hidden /> : <MessageSquare size={22} aria-hidden />}
       </button>
 
-      {/* Panel */}
+      {/* Panel: a full-height sheet on phones, a floating card from 640px up. */}
       {open ? (
         <div
           id="vx-chat-panel"
           ref={panelRef}
           role="dialog"
           aria-label={c.title}
-          className="fixed bottom-24 right-4 z-40 flex max-h-[min(560px,calc(100vh-8rem))] w-[calc(100vw-2rem)] max-w-[380px] flex-col overflow-hidden rounded-2xl border border-[rgba(14,165,233,0.25)] bg-vx-bg2 shadow-vx-glow motion-safe:animate-[fadeUp_180ms_ease-out] lg:bottom-28 lg:right-8"
+          className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-vx-bg2 pb-[env(safe-area-inset-bottom)] motion-safe:animate-[fadeUp_180ms_ease-out] sm:inset-auto sm:bottom-24 sm:right-4 sm:z-40 sm:h-[min(640px,calc(100dvh-8rem))] sm:w-[400px] sm:rounded-2xl sm:border sm:border-[rgba(14,165,233,0.25)] sm:pb-0 sm:shadow-vx-glow lg:bottom-28 lg:right-8"
         >
           {/* Header */}
-          <div className="flex items-center gap-3 border-b border-[rgba(14,165,233,0.14)] bg-vx-bg3 px-4 py-3">
+          <div className="flex items-center gap-3 border-b border-[rgba(14,165,233,0.14)] bg-vx-bg3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:pt-3">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-vx-blue/30 bg-vx-bg text-vx-blue">
               <Bot size={17} aria-hidden />
             </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-vx-ink">{c.title}</p>
+            <div className="min-w-0 flex-1">
+              <p className="flex items-center gap-2 text-sm font-semibold text-vx-ink">
+                {c.title}
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-vx-cyan">
+                  <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-vx-cyan" />
+                  {lang === "es" ? "En línea" : "Online"}
+                </span>
+              </p>
               <p className="truncate text-xs text-vx-muted">{c.subtitle}</p>
             </div>
+            {messages.length > 0 ? (
+              <button
+                type="button"
+                onClick={reset}
+                aria-label={c.newChat}
+                title={c.newChat}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-vx-muted transition-colors hover:text-vx-ink"
+              >
+                <RotateCcw size={15} aria-hidden />
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => {
@@ -270,81 +266,90 @@ export default function Chatbot() {
                 triggerRef.current?.focus();
               }}
               aria-label={c.close}
-              className="ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-lg text-vx-muted transition-colors hover:text-vx-ink"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-vx-muted transition-colors hover:text-vx-ink"
             >
               <X size={16} aria-hidden />
             </button>
           </div>
 
           {/* Log */}
-          <div
-            ref={logRef}
-            role="log"
-            aria-live="polite"
-            className="flex-1 overflow-y-auto px-4 py-4"
-          >
-            {/* Honest disclosure — shown before the first exchange, always. */}
+          <div ref={logRef} role="log" aria-live="polite" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+            {/* Honest disclosure, shown before the first exchange, always. */}
             <p className="rounded-xl border border-[rgba(14,165,233,0.16)] bg-vx-bg px-3 py-2.5 text-xs leading-relaxed text-vx-silver-dim">
               {c.disclosure}
             </p>
 
-            {messages.length === 0 ? (
-              <p className="mt-4 text-sm text-vx-muted">{c.startPrompt}</p>
-            ) : (
-              <div className="mt-4 flex flex-col gap-3">
-                {messages.map((m) =>
-                  m.from === "user" ? (
-                    <div key={m.id} className="flex justify-end">
-                      <p className="max-w-[85%] rounded-2xl rounded-br-sm bg-gradient-to-r from-vx-blue to-vx-cyan px-3.5 py-2 text-sm font-medium text-vx-onaccent">
-                        {m.text}
-                      </p>
-                    </div>
-                  ) : (
-                    <div key={m.id} className="flex justify-start">
-                      <div className="max-w-[92%] rounded-2xl rounded-bl-sm border border-[rgba(14,165,233,0.14)] bg-vx-bg px-3.5 py-2.5">
-                        <p className="text-sm leading-relaxed text-vx-silver">
-                          {m.text}
-                        </p>
-                        {m.lines ? (
-                          <ul className="mt-2 flex flex-col gap-1.5">
-                            {m.lines.map((line) => (
-                              <li
-                                key={line}
-                                className="flex gap-2 text-sm text-vx-muted"
-                              >
-                                <span
-                                  aria-hidden
-                                  className="mt-2 h-1 w-1 shrink-0 rounded-full bg-vx-cyan"
-                                />
-                                {line}
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
-                      </div>
-                    </div>
-                  ),
-                )}
+            <div className="mt-4 flex flex-col gap-3">
+              <BotBubble text={intro.text} />
+              {messages.length === 0 ? (
+                <Chips items={intro.suggestions ?? []} onPick={ask} />
+              ) : null}
 
-                {typing ? (
-                  <div className="flex justify-start">
-                    <div className="flex gap-1 rounded-2xl rounded-bl-sm border border-[rgba(14,165,233,0.14)] bg-vx-bg px-3.5 py-3">
-                      {[0, 1, 2].map((i) => (
-                        <span
-                          key={i}
-                          className="h-1.5 w-1.5 rounded-full bg-vx-blue motion-safe:animate-pulse"
-                          style={{ animationDelay: `${i * 140}ms` }}
-                        />
-                      ))}
-                      <span className="sr-only">…</span>
-                    </div>
+              {messages.map((m) =>
+                m.from === "user" ? (
+                  <div key={m.id} className="flex justify-end">
+                    <p className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-sm bg-gradient-to-r from-vx-blue to-vx-cyan px-3.5 py-2 text-sm font-medium text-vx-onaccent">
+                      {m.text}
+                    </p>
                   </div>
-                ) : null}
-              </div>
-            )}
+                ) : (
+                  <div key={m.id} className="flex flex-col items-start gap-2">
+                    <BotBubble text={m.text} lines={m.lines} />
+                    {m.actions && m.actions.length > 0 ? (
+                      <div className="flex max-w-[92%] flex-wrap gap-1.5">
+                        {m.actions.map((a) => {
+                          const Icon = ICONS[a.kind];
+                          const href = actionHref(a);
+                          const cls =
+                            a.kind === "book" || a.kind === "demo"
+                              ? "inline-flex min-h-[36px] items-center gap-1.5 rounded-lg bg-gradient-to-r from-vx-blue to-vx-cyan px-3 py-1.5 text-xs font-semibold text-vx-onaccent"
+                              : "inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-[rgba(14,165,233,0.28)] bg-vx-bg px-3 py-1.5 text-xs font-medium text-vx-silver transition-colors hover:border-vx-blue hover:text-vx-blue";
+                          return href ? (
+                            <a
+                              key={a.label}
+                              href={href}
+                              className={cls}
+                              {...(a.kind === "whatsapp" || (a.kind === "link" && a.external) ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                              onClick={() => {
+                                if (a.kind === "link" && !a.external) setOpen(false);
+                              }}
+                            >
+                              <Icon size={13} aria-hidden />
+                              {a.label}
+                            </a>
+                          ) : (
+                            <button key={a.label} type="button" onClick={() => runAction(a)} className={cls}>
+                              <Icon size={13} aria-hidden />
+                              {a.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                ),
+              )}
+
+              {typing ? (
+                <div className="flex justify-start">
+                  <div className="flex gap-1 rounded-2xl rounded-bl-sm border border-[rgba(14,165,233,0.14)] bg-vx-bg px-3.5 py-3">
+                    {[0, 1, 2].map((i) => (
+                      <span
+                        key={i}
+                        className="h-1.5 w-1.5 rounded-full bg-vx-blue motion-safe:animate-pulse"
+                        style={{ animationDelay: `${i * 140}ms` }}
+                      />
+                    ))}
+                    <span className="sr-only">…</span>
+                  </div>
+                </div>
+              ) : null}
+
+              {!typing && chips && chips.length > 0 ? <Chips items={chips} onPick={ask} /> : null}
+            </div>
           </div>
 
-          {/* Topics / actions */}
+          {/* Topics, question box and the two standing actions */}
           <div className="border-t border-[rgba(14,165,233,0.14)] bg-vx-bg3 px-4 py-3">
             {messages.length > 0 ? (
               <button
@@ -357,42 +362,114 @@ export default function Chatbot() {
               </button>
             ) : null}
 
-            <div className="flex flex-wrap gap-1.5">
-              {TOPICS.map((topic) => (
-                <button
-                  key={topic}
-                  type="button"
-                  onClick={() => ask(topic)}
-                  className="rounded-lg border border-[rgba(14,165,233,0.22)] bg-vx-bg px-2.5 py-1.5 text-xs text-vx-silver transition-colors hover:border-vx-blue hover:text-vx-blue"
-                >
-                  {c.topics[topic]}
-                </button>
-              ))}
-            </div>
+            {messages.length === 0 ? (
+              <div className="-mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+                {TOPICS.map((topic) => (
+                  <button
+                    key={topic}
+                    type="button"
+                    onClick={() => ask(c.topics[topic])}
+                    className="shrink-0 rounded-lg border border-[rgba(14,165,233,0.22)] bg-vx-bg px-2.5 py-1.5 text-xs text-vx-silver transition-colors hover:border-vx-blue hover:text-vx-blue"
+                  >
+                    {c.topics[topic]}
+                  </button>
+                ))}
+              </div>
+            ) : null}
 
-            <div className="mt-3 flex gap-2">
+            <form onSubmit={onSubmit} className="flex items-center gap-2">
+              <label htmlFor="vx-chat-input" className="sr-only">
+                {c.placeholder}
+              </label>
+              <input
+                id="vx-chat-input"
+                ref={inputRef}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder={c.placeholder}
+                autoComplete="off"
+                enterKeyHint="send"
+                maxLength={500}
+                className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-[rgba(14,165,233,0.25)] bg-vx-bg px-3.5 text-base text-vx-ink placeholder:text-vx-muted focus:border-vx-blue focus:outline-none sm:text-sm"
+              />
+              <button
+                type="submit"
+                disabled={!draft.trim() || typing}
+                aria-label={c.send}
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-r from-vx-blue to-vx-cyan text-vx-onaccent transition-opacity disabled:opacity-40"
+              >
+                <Send size={16} aria-hidden />
+              </button>
+            </form>
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setOpen(false);
                   openConsultation();
                 }}
-                className="inline-flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-vx-blue to-vx-cyan px-3 py-2 text-xs font-semibold text-vx-onaccent"
+                className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-vx-blue to-vx-cyan px-3 py-2 text-center text-xs font-semibold leading-tight text-vx-onaccent"
               >
-                <Send size={13} aria-hidden />
+                <CalendarCheck size={13} aria-hidden className="shrink-0" />
                 {c.bookCta}
               </button>
               <a
                 href={`/#${SECTION_IDS.contact}`}
                 onClick={() => setOpen(false)}
-                className="inline-flex min-h-[40px] flex-1 items-center justify-center rounded-lg border border-[rgba(14,165,233,0.25)] px-3 py-2 text-xs font-medium text-vx-silver hover:border-vx-blue hover:text-vx-blue"
+                className="inline-flex min-h-[40px] items-center justify-center rounded-lg border border-[rgba(14,165,233,0.25)] px-3 py-2 text-center text-xs font-medium leading-tight text-vx-silver hover:border-vx-blue hover:text-vx-blue"
               >
                 {c.humanCta}
               </a>
             </div>
+            <p className="mt-2 text-center text-[11px] text-vx-muted">
+              {lang === "es" ? "¿Prefieres hablar?" : "Prefer to talk?"}{" "}
+              <a href={CONTACT_HREFS.phone} className="font-medium text-vx-blue hover:text-vx-cyan">
+                {SITE.phone}
+              </a>
+            </p>
           </div>
         </div>
       ) : null}
     </>
+  );
+}
+
+function toMessage(r: Reply): Omit<Message, "id"> {
+  return { from: "bot", text: r.text, lines: r.lines, actions: r.actions, suggestions: r.suggestions };
+}
+
+function BotBubble({ text, lines }: { text: string; lines?: string[] }) {
+  return (
+    <div className="max-w-[92%] rounded-2xl rounded-bl-sm border border-[rgba(14,165,233,0.14)] bg-vx-bg px-3.5 py-2.5">
+      <p className="break-words text-sm leading-relaxed text-vx-silver">{text}</p>
+      {lines && lines.length > 0 ? (
+        <ul className="mt-2 flex flex-col gap-1.5">
+          {lines.map((line) => (
+            <li key={line} className="flex gap-2 text-sm leading-snug text-vx-muted">
+              <span aria-hidden className="mt-[0.45rem] h-1 w-1 shrink-0 rounded-full bg-vx-cyan" />
+              <span className="min-w-0 break-words">{line}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+function Chips({ items, onPick }: { items: string[]; onPick: (q: string) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((q) => (
+        <button
+          key={q}
+          type="button"
+          onClick={() => onPick(q)}
+          className="rounded-full border border-[rgba(14,165,233,0.28)] bg-vx-bg px-3 py-1.5 text-left text-xs text-vx-silver transition-colors hover:border-vx-blue hover:text-vx-blue"
+        >
+          {q}
+        </button>
+      ))}
+    </div>
   );
 }
