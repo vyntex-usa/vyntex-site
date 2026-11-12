@@ -39,6 +39,8 @@ export interface Reply {
   actions?: Action[];
   /** Follow-up questions shown as chips under the answer. */
   suggestions?: string[];
+  /** Show the main menu (the goal tiles) under this answer. */
+  menu?: boolean;
 }
 
 /** What the conversation is currently about, so "how long?" knows what "it" is. */
@@ -178,6 +180,7 @@ const editionName = (e: (typeof EDITIONS)[number], lang: Lang) =>
 interface Intent { id: string; terms: string[]; weight?: number }
 
 const INTENTS: Intent[] = [
+  { id: "menu", terms: ["menu", "main menu", "start over", "go back", "back to menu", "options menu", "menu principal", "inicio", "volver", "empezar de nuevo", "regresar"], weight: 3 },
   { id: "greeting", terms: ["hi", "hello", "hey", "good morning", "good afternoon", "hola", "buenas", "buenos dias", "buenas tardes", "que tal"] },
   { id: "thanks", terms: ["thanks", "thank you", "gracias", "muchas gracias", "perfect thanks", "great thanks"] },
   { id: "bye", terms: ["bye", "goodbye", "adios", "hasta luego", "nos vemos"] },
@@ -285,7 +288,7 @@ function editionReply(e: (typeof EDITIONS)[number], lang: Lang): Reply {
 const RECOMMEND_MAP: { terms: string[]; ids: string[]; reason: Localized }[] = [
   { terms: ["missed calls", "answer calls", "after hours", "llamadas perdidas", "contestar", "phone", "telefono"], ids: ["aifront", "crm-premium"], reason: { en: "You're losing calls. These answer the phone for you, day and night, in both languages.", es: "Estás perdiendo llamadas. Esto contesta por ti, de día y de noche, en los dos idiomas." } },
   { terms: ["website", "web site", "site", "pagina", "sitio", "online presence", "presencia"], ids: ["web-std", "starter"], reason: { en: "You need to be found and look professional online.", es: "Necesitas que te encuentren y verte profesional en internet." } },
-  { terms: ["follow up", "leads", "forgotten", "seguimiento", "prospectos", "clientes se olvidan", "more clients", "mas clientes"], ids: ["growth", "crm-standard"], reason: { en: "Nobody who contacts you should be forgotten. These answer, follow up and remind for you.", es: "Nadie que te contacte debe quedar olvidado. Esto responde, da seguimiento y recuerda por ti." } },
+  { terms: ["follow up", "leads", "forgotten", "seguimiento", "prospectos", "clientes se olvidan", "more clients", "more customers", "get customers", "mas clientes", "conseguir clientes"], ids: ["growth", "crm-standard"], reason: { en: "Nobody who contacts you should be forgotten. These answer, follow up and remind for you.", es: "Nadie que te contacte debe quedar olvidado. Esto responde, da seguimiento y recuerda por ti." } },
   { terms: ["logo", "brand", "marca", "business card", "tarjeta", "flyer", "volante", "new business", "negocio nuevo"], ids: ["brand-bundle", "brand-kit"], reason: { en: "A new or refreshed brand, with your social accounts and WhatsApp Business set up to match.", es: "Una marca nueva o renovada, con tus redes y WhatsApp Business configurados para combinar." } },
   { terms: ["social", "instagram", "facebook", "tiktok", "redes", "posts", "publicaciones"], ids: ["social-mgmt", "brand-bundle"], reason: { en: "Consistent posting without you doing it.", es: "Publicaciones constantes sin que tengas que hacerlo tú." } },
   { terms: ["automate", "automation", "repetitive", "manual", "automatizar", "automatizacion", "repetitivo"], ids: ["ai-standard", "ai-simple"], reason: { en: "Take repetitive work off your team.", es: "Quitarle trabajo repetitivo a tu equipo." } },
@@ -358,6 +361,7 @@ export function respond(input: string, pageLang: Lang, ctx: Context = {}): { rep
   }
 
   switch (top) {
+    case "menu": return done(mainMenu(lang));
     case "greeting": return done(welcome(lang));
     case "thanks": return done({ intent: "thanks", text: L(lang, "You're welcome. Anything else I can help with?", "Con gusto. ¿Te ayudo con algo más?"), suggestions: starterChips(lang) });
     case "bye": return done({ intent: "bye", text: L(lang, `Thanks for stopping by. When you're ready, we're one message away at ${SITE.phone}.`, `Gracias por visitarnos. Cuando quieras, estamos a un mensaje al ${SITE.phone}.`), actions: [bookAction(lang), whatsapp(lang)] });
@@ -391,20 +395,32 @@ export function respond(input: string, pageLang: Lang, ctx: Context = {}): { rep
 export function welcome(lang: Lang): Reply {
   return {
     intent: "welcome",
-    text: L(lang, "Hi, I'm the VYNTEX Assistant. Ask me anything about our websites, CRM, AI automation, branding, VYNTEX ERP, or how to get started. Type a question or pick one below.", "Hola, soy el Asistente de VYNTEX. Pregúntame lo que quieras sobre páginas web, CRM, automatización con IA, marca, VYNTEX ERP o cómo empezar. Escribe tu pregunta o elige una abajo."),
-    suggestions: starterChips(lang),
+    text: L(lang, "Hi, I'm the VYNTEX Assistant. Tell me what you want to fix and I'll show you exactly how we solve it, in seconds. Pick a goal or type your question.", "Hola, soy el Asistente de VYNTEX. Dime qué quieres resolver y te muestro exactamente cómo lo solucionamos, en segundos. Elige una meta o escribe tu pregunta."),
+    menu: true,
   };
 }
 
-export function starterChips(lang: Lang): string[] {
+/** The main menu: same goals as the welcome, reachable any time ("menu", the header button or the chip). */
+export function mainMenu(lang: Lang): Reply {
+  return { intent: "menu", text: L(lang, "Main menu. What would you like to solve?", "Menú principal. ¿Qué te gustaría resolver?"), menu: true };
+}
+
+export interface Goal { id: string; icon: "phone" | "growth" | "web" | "erp" | "brand" | "price"; title: string; sub: string; ask: string }
+
+/** The six goals on the welcome card. Each one asks the engine a question it answers well. */
+export function goals(lang: Lang): Goal[] {
   return [
-    L(lang, "What do I need for my business?", "¿Qué necesito para mi negocio?"),
-    L(lang, "What do you do?", "¿Qué hacen?"),
-    L(lang, "What does it cost?", "¿Cuánto cuesta?"),
-    L(lang, "Tell me about VYNTEX ERP", "Cuéntame de VYNTEX ERP"),
-    L(lang, "I keep missing calls", "Se me pierden llamadas"),
-    L(lang, "Talk to a person", "Hablar con una persona"),
+    { id: "calls", icon: "phone", title: L(lang, "Stop missing calls", "No perder más llamadas"), sub: L(lang, "Answer 24/7 in English and Spanish", "Contesta 24/7 en inglés y español"), ask: L(lang, "I keep missing calls", "Se me pierden llamadas") },
+    { id: "customers", icon: "growth", title: L(lang, "Get more customers", "Conseguir más clientes"), sub: L(lang, "Every lead answered and followed up", "Cada prospecto atendido y con seguimiento"), ask: L(lang, "I want more customers", "Quiero conseguir más clientes") },
+    { id: "website", icon: "web", title: L(lang, "A website that sells", "Una página web que vende"), sub: L(lang, "Fast, mobile, with booking", "Rápida, móvil y con reservas"), ask: L(lang, "I need a website", "Necesito una página web") },
+    { id: "erp", icon: "erp", title: L(lang, "Run my business in one place", "Manejar mi negocio en un solo lugar"), sub: L(lang, "VYNTEX ERP for your industry", "VYNTEX ERP para tu industria"), ask: L(lang, "I want software to run my business", "Quiero un software para manejar mi negocio") },
+    { id: "brand", icon: "brand", title: L(lang, "Look professional", "Verme profesional"), sub: L(lang, "Logo, cards, social and WhatsApp", "Logo, tarjetas, redes y WhatsApp"), ask: L(lang, "I need a brand for my business", "Necesito una marca para mi negocio") },
+    { id: "price", icon: "price", title: L(lang, "What does it cost?", "¿Cuánto cuesta?"), sub: L(lang, "How pricing and the free consultation work", "Cómo funcionan los precios y la consulta gratis"), ask: L(lang, "What does it cost?", "¿Cuánto cuesta?") },
   ];
+}
+
+export function starterChips(lang: Lang): string[] {
+  return goals(lang).map((g) => g.ask);
 }
 
 function who(lang: Lang): Reply {
