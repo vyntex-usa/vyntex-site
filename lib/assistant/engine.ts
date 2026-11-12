@@ -72,6 +72,7 @@ const ES_MARKERS = [
   "que", "como", "cuanto", "cuesta", "precio", "quiero", "necesito", "tienen", "hacen", "pagina",
   "negocio", "hola", "gracias", "buenas", "puedo", "para", "mi", "una", "los", "las", "del", "por favor",
   "cuando", "donde", "llamar", "hablar", "espanol", "ingles", "cita", "consulta", "limpieza", "barberia",
+  "soy", "tengo", "manejo", "tienen", "busco", "quisiera", "ayuda", "negocios", "empresa",
 ];
 
 /** Guesses the language of what was typed; falls back to the page language. */
@@ -146,19 +147,21 @@ export function matchService(text: string): ServiceItem | undefined {
 // Knowledge: VYNTEX ERP editions
 // ---------------------------------------------------------------------------------------------
 
-export const EDITIONS: { id: string; en: string; es: string; terms: string[] }[] = [
-  { id: "contractors", en: "General Contractors", es: "Contratistas Generales", terms: ["contractor", "contratista", "construction", "construccion", "remodel", "remodelacion", "roofing", "techos", "builder", "handyman"] },
-  { id: "clean", en: "Cleaning Services", es: "Servicios de Limpieza", terms: ["cleaning", "limpieza", "janitorial", "maid", "housekeeping", "cleaners"] },
-  { id: "landscape", en: "Landscaping", es: "Jardinería y Paisajismo", terms: ["landscaping", "landscape", "lawn", "jardineria", "paisajismo", "hardscape", "jardin"] },
-  { id: "wash", en: "Pressure Washing", es: "Lavado a Presión", terms: ["pressure washing", "power washing", "lavado a presion", "window cleaning", "gutter", "canaletas"] },
-  { id: "haul", en: "Junk Removal and Moving", es: "Retiro de Basura y Mudanzas", terms: ["junk removal", "moving", "mudanza", "mudanzas", "hauling", "retiro de basura"] },
-  { id: "snow", en: "Snow Removal", es: "Remoción de Nieve", terms: ["snow", "nieve", "plowing", "salting"] },
-  { id: "turnover", en: "Property Turnover", es: "Preparación de Propiedades", terms: ["turnover", "make ready", "property management", "apartment turn", "preparacion de propiedades"] },
-  { id: "events", en: "Event Services", es: "Servicios para Eventos", terms: ["events", "event staffing", "eventos", "catering staff", "event setup"] },
-  { id: "hvac", en: "HVAC Contractors", es: "Contratistas de HVAC", terms: ["hvac", "heating", "air conditioning", "aire acondicionado", "calefaccion", "furnace"] },
-  { id: "plumbing", en: "Plumbing Contractors", es: "Contratistas de Plomería", terms: ["plumbing", "plumber", "plomeria", "plomero", "drain", "water heater"] },
-  { id: "practice", en: "Professional Services", es: "Servicios Profesionales", terms: ["tax", "taxes", "impuestos", "bookkeeping", "contabilidad", "accounting", "payroll", "nomina", "tax preparer", "cpa", "notary", "insurance agency", "law firm", "professional services"] },
-  { id: "barber", en: "Barbershops", es: "Barberías", terms: ["barber", "barbershop", "barberia", "barbero", "salon", "beauty", "grooming", "peluqueria"] },
+const TRADE: { en: string; es: string }[] = [{ en: "Jobs and crews in one schedule, with a portal for your crew", es: "Trabajos y cuadrillas en una sola agenda, con portal para tu equipo" }, { en: "W-9 and insurance uploads with expiry alerts, and 1099 tracking", es: "Carga de W-9 y seguros con alertas, y seguimiento 1099" }, { en: "Agreements, invoices and payments, with automatic client emails", es: "Acuerdos, facturas y pagos, con correos automáticos a clientes" }];
+
+export const EDITIONS: { id: string; en: string; es: string; terms: string[]; highlights: { en: string; es: string }[] }[] = [
+  { id: "contractors", en: "General Contractors", es: "Contratistas Generales", terms: ["contractor", "contratista", "construction", "construccion", "remodel", "remodelacion", "roofing", "techos", "builder", "handyman"], highlights: [{ en: "Projects, subcontractors and payments in one place", es: "Proyectos, subcontratistas y pagos en un solo lugar" }, { en: "Subcontractor portal, W-9 and insurance alerts, and 1099 tracking", es: "Portal de subcontratistas, alertas de W-9 y seguros, y seguimiento 1099" }, { en: "Agreements and invoices, plus profit reports by project on Pro", es: "Acuerdos y facturas, más reportes de ganancia por proyecto en Pro" }] },
+  { id: "clean", en: "Cleaning Services", es: "Servicios de Limpieza", terms: ["cleaning", "limpieza", "janitorial", "maid", "housekeeping", "cleaners"], highlights: TRADE },
+  { id: "landscape", en: "Landscaping", es: "Jardinería y Paisajismo", terms: ["landscaping", "landscape", "lawn", "jardineria", "paisajismo", "hardscape", "jardin"], highlights: TRADE },
+  { id: "wash", en: "Pressure Washing", es: "Lavado a Presión", terms: ["pressure washing", "power washing", "lavado a presion", "window cleaning", "gutter", "canaletas"], highlights: TRADE },
+  { id: "haul", en: "Junk Removal and Moving", es: "Retiro de Basura y Mudanzas", terms: ["junk removal", "moving", "mudanza", "mudanzas", "hauling", "retiro de basura"], highlights: TRADE },
+  { id: "snow", en: "Snow Removal", es: "Remoción de Nieve", terms: ["snow", "nieve", "plowing", "salting"], highlights: TRADE },
+  { id: "turnover", en: "Property Turnover", es: "Preparación de Propiedades", terms: ["turnover", "make ready", "property management", "apartment turn", "preparacion de propiedades"], highlights: TRADE },
+  { id: "events", en: "Event Services", es: "Servicios para Eventos", terms: ["events", "event staffing", "eventos", "catering staff", "event setup"], highlights: TRADE },
+  { id: "hvac", en: "HVAC Contractors", es: "Contratistas de HVAC", terms: ["hvac", "heating", "air conditioning", "aire acondicionado", "calefaccion", "furnace"], highlights: TRADE },
+  { id: "plumbing", en: "Plumbing Contractors", es: "Contratistas de Plomería", terms: ["plumbing", "plumber", "plomeria", "plomero", "drain", "water heater"], highlights: TRADE },
+  { id: "practice", en: "Professional Services", es: "Servicios Profesionales", terms: ["tax", "taxes", "impuestos", "bookkeeping", "contabilidad", "accounting", "payroll", "nomina", "tax preparer", "cpa", "notary", "insurance agency", "law firm", "professional services"], highlights: [{ en: "Clients, engagements and filing deadlines with reminders", es: "Clientes, encargos y fechas límite de declaraciones con recordatorios" }, { en: "A secure vault for tax IDs, with access approvals and a log", es: "Bóveda segura para números fiscales, con aprobaciones de acceso y registro" }, { en: "Your service catalog, contracts and invoices", es: "Tu catálogo de servicios, contratos y facturas" }] },
+  { id: "barber", en: "Barbershops", es: "Barberías", terms: ["barber", "barbershop", "barberia", "barbero", "salon", "beauty", "grooming", "peluqueria"], highlights: [{ en: "Appointments, online booking and a walk-in line with live wait times", es: "Citas, reservas en línea y fila de clientes sin cita con tiempo de espera en vivo" }, { en: "Check-in kiosk and a waiting-area TV board", es: "Kiosco de registro y pantalla de turnos para la sala de espera" }, { en: "Memberships, packages, gift cards and barber pay with tips", es: "Membresías, paquetes, tarjetas de regalo y pago a barberos con propinas" }] },
 ];
 
 export function matchEdition(text: string) {
@@ -185,14 +188,14 @@ const INTENTS: Intent[] = [
   { id: "thanks", terms: ["thanks", "thank you", "gracias", "muchas gracias", "perfect thanks", "great thanks"] },
   { id: "bye", terms: ["bye", "goodbye", "adios", "hasta luego", "nos vemos"] },
   { id: "who", terms: ["who are you", "are you a bot", "are you human", "are you ai", "quien eres", "eres un bot", "eres humano", "what are you"] },
-  { id: "about", terms: ["about vyntex", "who is vyntex", "what is vyntex", "que es vyntex", "quienes son", "about you", "company", "empresa"] },
+  { id: "about", terms: ["about vyntex", "who is vyntex", "what is vyntex", "que es vyntex", "quienes son", "about you", "about your company"] },
   { id: "pricing", terms: ["price", "prices", "pricing", "cost", "costs", "how much", "rates", "fee", "fees", "quote", "budget", "expensive", "cheap", "precio", "precios", "cuanto cuesta", "cuanto cobran", "cotizacion", "presupuesto", "tarifa"], weight: 2 },
   { id: "services", terms: ["services", "what do you build", "what do you do", "what do you offer", "offer", "options", "packages", "servicios", "que ofrecen", "paquetes", "que hacen", "que construyen"] },
   { id: "timeline", terms: ["how long", "timeline", "when ready", "ready in", "turnaround", "how fast", "delivery time", "cuanto tiempo", "cuanto tarda", "plazo", "tiempo de entrega", "cuando estaria"], weight: 2 },
   { id: "included", terms: ["included", "includes", "what do i get", "what comes with", "incluye", "que incluye", "que trae"], weight: 2 },
   { id: "excluded", terms: ["not included", "excluded", "extra cost", "hidden fees", "hosting", "domain", "third party", "no incluye", "costos extra", "dominio", "cargos ocultos"], weight: 2 },
   { id: "consultation", terms: ["book", "schedule", "appointment", "consultation", "meeting", "call me", "agendar", "cita", "consulta", "reunion", "llamenme", "quiero empezar", "get started", "start", "empezar", "sign up"], weight: 2 },
-  { id: "contact", terms: ["contact", "phone", "number", "email", "whatsapp", "address", "where are you", "location", "office", "contacto", "telefono", "correo", "direccion", "donde estan", "oficina", "human", "person", "talk to someone", "talk to a person", "agent", "persona", "humano", "representative", "hablar con alguien"], weight: 3 },
+  { id: "contact", terms: ["contact", "phone", "number", "email", "whatsapp", "address", "where are you", "location", "your office", "where is your office", "contacto", "telefono", "correo", "direccion", "donde estan", "oficina", "human", "person", "talk to someone", "talk to a person", "agent", "persona", "humano", "representative", "hablar con alguien"], weight: 3 },
   { id: "hours", terms: ["hours", "open", "when are you open", "horario", "abren", "que hora"] },
   { id: "languages", terms: ["spanish", "english", "bilingual", "espanol", "ingles", "bilingue", "language", "idioma", "hablan espanol", "do you speak"] },
   { id: "support", terms: ["support", "maintenance", "changes", "after launch", "updates", "soporte", "mantenimiento", "cambios", "actualizaciones", "help after"] },
@@ -276,7 +279,7 @@ function editionReply(e: (typeof EDITIONS)[number], lang: Lang): Reply {
       `${editionName(e, lang)} maneja toda la operación en un solo lugar: prospectos, clientes, agenda, documentos, pagos, tu equipo y reportes, con las palabras de tu industria. Puedes abrir la demo en vivo ahora mismo con una empresa de ejemplo, sin crear cuenta.`,
     ),
     lines: [
-      L(lang, "Three plans for every industry: Basic, Essential and Pro", "Tres planes para cada industria: Básico, Esencial y Pro"),
+      ...e.highlights.map((h) => h[lang]),
       L(lang, "7-day free trial with every feature open", "Prueba gratis de 7 días con todo abierto"),
       L(lang, "Setup done together with you, in English or Spanish", "La instalación la hacemos contigo, en inglés o español"),
     ],
@@ -610,7 +613,7 @@ function erpReply(lang: Lang): Reply {
 function erpPlans(lang: Lang, industry?: string): Reply {
   return {
     intent: "erp.plans",
-    text: L(lang, "VYNTEX ERP has the same three plans for every industry, with monthly or yearly billing and no setup fee:", "VYNTEX ERP tiene los mismos tres planes para cada industria, con pago mensual o anual y sin costo de instalación:"),
+    text: L(lang, "VYNTEX ERP has three plans, with monthly or yearly billing and no setup fee:", "VYNTEX ERP tiene tres planes, con pago mensual o anual y sin costo de instalación:"),
     lines: [
       L(lang, "Basic: for the owner working alone. Every core feature, agreements and invoices", "Básico: para el dueño que trabaja solo. Todas las funciones principales, acuerdos y facturas"),
       L(lang, "Essential (most popular): up to 5 users, worker portal, 1099 tracking, VYNTEX AI for questions, two-way Google Calendar and automatic client emails", "Esencial (el más popular): hasta 5 usuarios, portal del equipo, seguimiento 1099, VYNTEX AI para preguntas, Google Calendar en ambos sentidos y correos automáticos a clientes"),
